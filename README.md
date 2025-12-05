@@ -86,6 +86,7 @@ Test,Vip,New,Another
 - First letter uppercase (`vip` → `Vip`)  
 - Enforced max length  
 - Duplicate prevention  
+<img width="475" height="166" alt="Screenshot 2025-12-05 161209" src="https://github.com/user-attachments/assets/65bb68bd-f182-4a84-86a9-147898f0cc36" />
 
 ---
 
