@@ -6,15 +6,12 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
     private container!: HTMLDivElement;
     private tags: string[] = [];
     private errorMessage: string | null = null;
+    private showAllTags = false;
 
-    // keep latest context so we can re-render on events
     private context!: ComponentFramework.Context<IInputs>;
     private notifyOutputChanged!: () => void;
 
-    // ----- Lifecycle -----
-
     constructor() {
-        // Required by framework
         console.log("VossTagViewControl constructed");
     }
 
@@ -30,29 +27,34 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         this.container = container;
 
         this.tags = this.parseTags(context);
+        this.showAllTags = false;
+
         this.render();
     }
 
     public updateView(context: ComponentFramework.Context<IInputs>): void {
-        // Framework calls this whenever data or dimensions change
         this.context = context;
         this.tags = this.parseTags(context);
+
+        // If user has expanded and now tags fit the limit → collapse back automatically
+        if (this.showAllTags && this.tags.length <= this.getMaxTagsToShow(context)) {
+            this.showAllTags = false;
+        }
+
         this.render();
     }
 
     public getOutputs(): IOutputs {
-        // Join tags back into single-line text
         return {
             voss_tags: this.tags.join(",")
         };
     }
 
     public destroy(): void {
-        // No special cleanup for now
         console.log("VossTagViewControl destroyed");
     }
 
-    // ----- Helpers: data & configuration -----
+    // ----- Helpers -----
 
     private parseTags(context: ComponentFramework.Context<IInputs>): string[] {
         const raw = context.parameters.voss_tags.raw || "";
@@ -61,7 +63,6 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
             .map(t => t.trim())
             .filter(t => t.length > 0);
 
-        // normalize + dedupe
         const seen = new Set<string>();
         const normalized: string[] = [];
 
@@ -69,17 +70,13 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
 
         for (const p of parts) {
             const tag = this.normalizeTagText(p);
-            if (!tag) {
-                continue;
-            }
+            if (!tag) continue;
 
-            // silently skip too-long tags coming from existing data
-            if (tag.length > maxLength) {
-                continue;
-            }
+            if (tag.length > maxLength) continue;
 
-            if (!seen.has(tag.toLowerCase())) {
-                seen.add(tag.toLowerCase());
+            const lower = tag.toLowerCase();
+            if (!seen.has(lower)) {
+                seen.add(lower);
                 normalized.push(tag);
             }
         }
@@ -115,10 +112,8 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         }
 
         try {
-            const obj = JSON.parse(raw) as Record<string, string>;
-            return obj;
+            return JSON.parse(raw) as Record<string, string>;
         } catch (e) {
-            // If JSON is invalid, ignore palette but do not break control
             console.warn("Invalid customTagPalette JSON", e);
             return null;
         }
@@ -126,16 +121,10 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
 
     private normalizeTagText(input: string): string | null {
         const trimmed = input.trim();
-        if (!trimmed) {
-            return null;
-        }
-
-        // First letter uppercase, rest lowercase
+        if (!trimmed) return null;
         const lower = trimmed.toLowerCase();
         return lower.charAt(0).toUpperCase() + lower.slice(1);
     }
-
-    // ----- Tag color logic -----
 
     private getTagColor(tag: string): string {
         const context = this.context;
@@ -146,30 +135,26 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         }
 
         const palette = this.getCustomPalette(context);
-        const key = tag; // use normalized tag as key
-
-        if (palette && palette[key]) {
-            return palette[key];
+        if (palette && palette[tag]) {
+            return palette[tag];
         }
 
-        // simple deterministic color based on hash of tag
         const colorPool = [
-            "#F59F27", // orange
-            "#0F6CBD", // blue
-            "#107C10", // green
-            "#D13438", // red
-            "#8C0095", // purple
-            "#008272"  // teal
+            "#F59F27",
+            "#0F6CBD",
+            "#107C10",
+            "#D13438",
+            "#8C0095",
+            "#008272"
         ];
 
         let hash = 0;
-        for (let i = 0; i < key.length; i++) {
-            hash = ((hash << 5) - hash) + key.charCodeAt(i);
-            hash |= 0; // convert to 32-bit int
+        for (let i = 0; i < tag.length; i++) {
+            hash = ((hash << 5) - hash) + tag.charCodeAt(i);
+            hash |= 0;
         }
 
-        const index = Math.abs(hash) % colorPool.length;
-        return colorPool[index];
+        return colorPool[Math.abs(hash) % colorPool.length];
     }
 
     // ----- Rendering -----
@@ -178,7 +163,6 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         const context = this.context;
         const isDisabled = context.mode.isControlDisabled;
 
-        // Clear container
         while (this.container.firstChild) {
             this.container.removeChild(this.container.firstChild);
         }
@@ -186,21 +170,23 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         const wrapper = document.createElement("div");
         wrapper.className = "voss-tag-wrapper";
 
-        const maxToShow = this.getMaxTagsToShow(context);
+        const maxToShow = this.showAllTags ? this.tags.length : this.getMaxTagsToShow(context);
         const visibleTags = this.tags.slice(0, maxToShow);
         const hiddenCount = this.tags.length - visibleTags.length;
 
-        // Render each visible tag chip
+        const tagList = document.createElement("div");
+        tagList.className = "voss-tag-list";
+
         visibleTags.forEach(tag => {
             const chip = document.createElement("div");
             chip.className = "voss-tag";
             chip.style.backgroundColor = this.getTagColor(tag);
 
-            const textSpan = document.createElement("span");
-            textSpan.className = "voss-tag-text";
-            textSpan.innerText = tag;
+            const text = document.createElement("span");
+            text.className = "voss-tag-text";
+            text.innerText = tag;
 
-            chip.appendChild(textSpan);
+            chip.appendChild(text);
 
             if (!isDisabled) {
                 const close = document.createElement("span");
@@ -213,18 +199,54 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
                 chip.appendChild(close);
             }
 
-            wrapper.appendChild(chip);
+            tagList.appendChild(chip);
         });
 
-        // Show "+X" if there are more tags than we display
+        // Expand button ("+X")
         if (hiddenCount > 0) {
             const moreChip = document.createElement("div");
             moreChip.className = "voss-tag-more";
             moreChip.innerText = `+${hiddenCount}`;
-            wrapper.appendChild(moreChip);
+            moreChip.setAttribute("role", "button");
+            moreChip.tabIndex = 0;
+            moreChip.onclick = () => {
+                this.showAllTags = true;
+                this.render();
+            };
+            moreChip.onkeydown = (e: KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    this.showAllTags = true;
+                    this.render();
+                }
+            };
+            tagList.appendChild(moreChip);
         }
 
-        // Input box (only when control is enabled & editable)
+        // Collapse button ("less")
+        const canCollapse = this.showAllTags && this.tags.length > this.getMaxTagsToShow(context);
+        if (canCollapse) {
+            const collapseChip = document.createElement("div");
+            collapseChip.className = "voss-tag-toggle";
+            collapseChip.innerText = "less";
+            collapseChip.setAttribute("role", "button");
+            collapseChip.tabIndex = 0;
+            collapseChip.onclick = () => {
+                this.showAllTags = false;
+                this.render();
+            };
+            collapseChip.onkeydown = (e: KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    this.showAllTags = false;
+                    this.render();
+                }
+            };
+            tagList.appendChild(collapseChip);
+        }
+
+        wrapper.appendChild(tagList);
+
         if (!isDisabled && context.mode.isVisible) {
             const input = document.createElement("input");
             input.type = "text";
@@ -244,7 +266,6 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
 
         this.container.appendChild(wrapper);
 
-        // Error message (for max length or duplicates)
         if (this.errorMessage && !isDisabled) {
             const errorDiv = document.createElement("div");
             errorDiv.className = "voss-tag-error";
@@ -253,15 +274,14 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         }
     }
 
-    // ----- Tag operations -----
+    // ----- Mutations -----
 
     private addTagFromInput(rawInput: string): void {
         this.errorMessage = null;
 
-        const context = this.context;
-        const maxLength = this.getMaxTagLength(context);
-
+        const maxLength = this.getMaxTagLength(this.context);
         const normalized = this.normalizeTagText(rawInput);
+
         if (!normalized) {
             this.render();
             return;
@@ -274,8 +294,9 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         }
 
         const lower = normalized.toLowerCase();
-        const alreadyExists = this.tags.some(t => t.toLowerCase() === lower);
-        if (alreadyExists) {
+        const exists = this.tags.some(t => t.toLowerCase() === lower);
+
+        if (exists) {
             this.errorMessage = "Tag already exists.";
             this.render();
             return;
@@ -293,11 +314,9 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
     }
 
     private pushChanges(): void {
-        // notify the framework that the bound value changed
         if (this.notifyOutputChanged) {
             this.notifyOutputChanged();
         }
-        // re-render to reflect updates
         this.render();
     }
 }
