@@ -8,8 +8,11 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
     private errorMessage: string | null = null;
     private showAllTags = false;
 
+    // keep latest context so we can re-render on events
     private context!: ComponentFramework.Context<IInputs>;
     private notifyOutputChanged!: () => void;
+
+    // ----- Lifecycle -----
 
     constructor() {
         console.log("VossTagViewControl constructed");
@@ -28,7 +31,6 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
 
         this.tags = this.parseTags(context);
         this.showAllTags = false;
-
         this.render();
     }
 
@@ -36,7 +38,7 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         this.context = context;
         this.tags = this.parseTags(context);
 
-        // If user has expanded and now tags fit the limit → collapse back automatically
+        // auto-collapse if everything fits
         if (this.showAllTags && this.tags.length <= this.getMaxTagsToShow(context)) {
             this.showAllTags = false;
         }
@@ -54,7 +56,7 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         console.log("VossTagViewControl destroyed");
     }
 
-    // ----- Helpers -----
+    // ----- Helpers: data & configuration -----
 
     private parseTags(context: ComponentFramework.Context<IInputs>): string[] {
         const raw = context.parameters.voss_tags.raw || "";
@@ -122,19 +124,19 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
     private normalizeTagText(input: string): string | null {
         const trimmed = input.trim();
         if (!trimmed) return null;
+
         const lower = trimmed.toLowerCase();
         return lower.charAt(0).toUpperCase() + lower.slice(1);
     }
 
     private getTagColor(tag: string): string {
-        const context = this.context;
-        const defaultColor = this.getDefaultColor(context);
+        const defaultColor = this.getDefaultColor(this.context);
 
-        if (!this.useDynamicColors(context)) {
+        if (!this.useDynamicColors(this.context)) {
             return defaultColor;
         }
 
-        const palette = this.getCustomPalette(context);
+        const palette = this.getCustomPalette(this.context);
         if (palette && palette[tag]) {
             return palette[tag];
         }
@@ -182,11 +184,11 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
             chip.className = "voss-tag";
             chip.style.backgroundColor = this.getTagColor(tag);
 
-            const text = document.createElement("span");
-            text.className = "voss-tag-text";
-            text.innerText = tag;
+            const textSpan = document.createElement("span");
+            textSpan.className = "voss-tag-text";
+            textSpan.innerText = tag;
 
-            chip.appendChild(text);
+            chip.appendChild(textSpan);
 
             if (!isDisabled) {
                 const close = document.createElement("span");
@@ -202,17 +204,19 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
             tagList.appendChild(chip);
         });
 
-        // Expand button ("+X")
+        // Expand ("+X")
         if (hiddenCount > 0) {
             const moreChip = document.createElement("div");
             moreChip.className = "voss-tag-more";
             moreChip.innerText = `+${hiddenCount}`;
             moreChip.setAttribute("role", "button");
             moreChip.tabIndex = 0;
+
             moreChip.onclick = () => {
                 this.showAllTags = true;
                 this.render();
             };
+
             moreChip.onkeydown = (e: KeyboardEvent) => {
                 if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
@@ -220,21 +224,25 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
                     this.render();
                 }
             };
+
             tagList.appendChild(moreChip);
         }
 
-        // Collapse button ("less")
+        // Collapse ("less")
         const canCollapse = this.showAllTags && this.tags.length > this.getMaxTagsToShow(context);
+
         if (canCollapse) {
             const collapseChip = document.createElement("div");
             collapseChip.className = "voss-tag-toggle";
             collapseChip.innerText = "less";
             collapseChip.setAttribute("role", "button");
             collapseChip.tabIndex = 0;
+
             collapseChip.onclick = () => {
                 this.showAllTags = false;
                 this.render();
             };
+
             collapseChip.onkeydown = (e: KeyboardEvent) => {
                 if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
@@ -242,11 +250,13 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
                     this.render();
                 }
             };
+
             tagList.appendChild(collapseChip);
         }
 
         wrapper.appendChild(tagList);
 
+        // Input box
         if (!isDisabled && context.mode.isVisible) {
             const input = document.createElement("input");
             input.type = "text";
@@ -274,7 +284,7 @@ export class VossTagViewControl implements ComponentFramework.StandardControl<II
         }
     }
 
-    // ----- Mutations -----
+    // ----- Tag operations -----
 
     private addTagFromInput(rawInput: string): void {
         this.errorMessage = null;
