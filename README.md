@@ -8,7 +8,8 @@
 ## 📌 Overview  
 `VossTagViewControl` is a custom Power Apps Component Framework (PCF) control that replaces a standard Single-Line Text field with an interactive “tag chip” experience.  
 It converts comma-separated text into a user-friendly, editable tag interface used across Dynamics 365.
-
+<img width="461" height="95" alt="Screenshot 2025-12-05 161145" src="https://github.com/user-attachments/assets/72cf9eea-28b3-4e26-b71a-09d721f3a2a5" />
+<img width="481" height="146" alt="Screenshot 2025-12-05 161154" src="https://github.com/user-attachments/assets/ff1845cb-3bcd-45f5-a7f9-d2bd5f27c69a" />
 The control is optimized for:
 - Clean data entry  
 - Fast tagging  
@@ -45,6 +46,7 @@ Defined in `ControlManifest.Input.xml`:
 | `customTagPalette` | JSON mapping: `{ "Vip": "#FF0000" }` |
 | `maxTagsToShow` | Number of visible tags before collapsing |
 | `maxTagLength` | Max allowed characters per tag |
+<img width="508" height="815" alt="Screenshot 2025-12-05 161136" src="https://github.com/user-attachments/assets/cfa764de-dcdd-48de-a9f2-0e67b61fa544" />
 
 ---
 
