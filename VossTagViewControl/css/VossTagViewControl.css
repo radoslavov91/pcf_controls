@@ -1,0 +1,42 @@
+.voss-tag-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap; /* one-line only for views */
+    overflow: hidden;
+}
+
+.voss-tag {
+    background: #5c6ac4;  /* will be overridden by dynamic colors */
+    color: white;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.voss-tag-more {
+    background: #b0b0b0;
+    color: #000000;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.voss-tag-input {
+    min-width: 80px;
+    border: 1px solid #d0d0d0;
+    padding: 3px 6px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.voss-tag-error {
+    color: #b00020;
+    font-size: 11px;
+    padding-top: 4px;
+}

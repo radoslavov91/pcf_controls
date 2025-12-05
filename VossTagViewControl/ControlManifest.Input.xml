@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest>
+  <control namespace="VOSS" constructor="VossTagViewControl" version="1.0.0"
+           display-name-key="VossTagViewControl"
+           description-key="VossTagViewControl description"
+           control-type="standard">
+
+    <!-- Bound field -->
+    <property name="voss_tags"
+              display-name-key="Tags"
+              description-key="Comma-separated list of tags"
+              usage="bound"
+              of-type="SingleLine.Text"
+              required="true" />
+
+    <!-- Default color -->
+    <property name="defaultTagColor"
+              display-name-key="Default Tag Color"
+              description-key="Base color for tags"
+              usage="input"
+              of-type="SingleLine.Text" />
+
+    <!-- Dynamic colors -->
+    <property name="useDynamicColors"
+              display-name-key="Use Dynamic Colors"
+              description-key="Generate different colors per tag"
+              usage="input"
+              of-type="TwoOptions" />
+
+    <!-- Custom palette -->
+    <property name="customTagPalette"
+              display-name-key="Custom Tag Palette"
+              description-key="JSON mapping: tag → color"
+              usage="input"
+              of-type="SingleLine.Text" />
+
+    <!-- Max visible tags -->
+    <property name="maxTagsToShow"
+              display-name-key="Max Tags To Show"
+              description-key="Maximum number of visible tags"
+              usage="input"
+              of-type="Whole.None" />
+
+    <!-- Max characters per tag -->
+    <property name="maxTagLength"
+              display-name-key="Max Tag Length"
+              description-key="Maximum characters per tag"
+              usage="input"
+              of-type="Whole.None" />
+
+    <resources>
+      <code path="index.ts" order="1" />
+      <css path="css/VossTagViewControl.css" order="2" />
+    </resources>
+
+  </control>
+</manifest>
